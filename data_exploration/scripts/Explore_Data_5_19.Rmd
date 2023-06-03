@@ -1,0 +1,250 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+library('DescTools')
+library(geosphere)
+library(sp)
+library(tidygeocoder)
+```
+
+```{r}
+observations <- read_csv("../data/observation_phenology.csv")
+location_months <- read_csv("../data/location_months_in_season.csv")
+
+observations$stage <- as.factor(observations$stage)
+observations$taxonomic_rank <- as.factor(observations$taxonomic_rank)
+observations$taxonomic_rank_name <- as.factor(observations$taxonomic_rank_name)
+
+location_months$taxonomic_rank <- as.factor(location_months$taxonomic_rank)
+location_months$taxonomic_rank_name <- as.factor(location_months$taxonomic_rank_name)
+
+observations$month <- month(observations$date)
+```
+
+```{r}
+location_lat_lng <- unique(select(observations, c("location_id", "lat", "lng")))
+```
+
+```{r}
+apples_observations <- observations[which(observations$scientific_name == "Malus pumila"), ]
+apples_locations <- location_months[which(location_months$scientific_name == "Malus pumila"), ]
+
+apples_locations$scientific_name <- NULL
+apples_locations$scientific_synonyms <- NULL
+apples_locations$en_name <- NULL
+apples_locations$type_id <- NULL
+apples_locations$taxonomic_rank <- NULL
+apples_locations$taxonomic_rank_name <- NULL
+
+apples_observations$scientific_name <- NULL
+apples_observations$scientific_synonyms <- NULL
+apples_observations$en_name <- NULL
+apples_observations$type_id <- NULL
+apples_observations$taxonomic_rank <- NULL
+apples_observations$taxonomic_rank_name <- NULL
+```
+
+```{r}
+apples_locations_matched <- merge(apples_locations, apples_observations, on="location_id")
+
+apples_locations_matched <- apples_locations_matched %>% 
+    drop_na() %>%
+    mutate(month_diff = end_month - month) %>%
+    mutate(grow_range = end_month - start_month) %>%
+    mutate(in_grow_range = month_diff <= grow_range)
+    
+```
+
+```{r}
+get_species_dataframe <- function(scientific_name) {
+    spec_observations <- observations[which(observations$scientific_name == scientific_name), ] %>%
+        select(c("location_id", "lat", "lng", "stage", "month"))
+    spec_locations <- location_months[which(location_months$scientific_name == scientific_name), ] %>%
+        select(c("location_id", "start_month", "end_month"))
+    
+    merged <- merge(spec_locations, spec_observations, on="location_id") %>%
+        drop_na()
+    
+    subtract <- function(x1, x2) {
+        return(x1 - x2)
+    }
+    #merged$month_diff = merged$end_month - merged$month
+    merged <- within(merged, month_diff = ifelse(end_month < month, (end_month + 12) - month, end_month - month))
+    merged <- within(merged, grow_range = ifelse(end_month < start_month, (end_month + 12) - start_month, end_month - start_month))
+    
+    
+    #merged$grow_range = merged$end_month - merged$start_month
+    merged$in_grow_range = merged$month_diff <= merged$grow_range
+    
+    # Add 12 to this calculation if end month < start_month. 
+    
+    merged$northern_hemisphere = merged$lat > 0
+    
+    return(merged)
+}
+```
+
+```{r}
+example_lemons <- get_species_dataframe("Citrus x limon")
+```
+
+```{r}
+unique_species <- unique(observations$scientific_name)
+
+species_list <- list(lapply(unique_species, FUN = get_species_dataframe))
+names(species_list[[1]]) <- unique_species
+species_df <- bind_rows(species_list[[1]], .id="species")
+
+north_species_df <- species_df[species_df$northern_hemisphere,]
+south_species_df <- species_df[!species_df$northern_hemisphere,]
+```
+
+
+## Models
+
+Need to model stage by in_grow_range?
+Make sure grow range is accurate due to month wraparound.
+```{r}
+table(apples_locations_matched$in_grow_range, apples_locations_matched$stage)
+
+chisq.test(apples_locations_matched$in_grow_range, apples_locations_matched$stage)
+
+ContCoef(apples_locations_matched$in_grow_range, apples_locations_matched$stage, correct = FALSE)
+ContCoef(apples_locations_matched$in_grow_range, apples_locations_matched$stage, correct = TRUE)
+```
+
+```{r}
+chisq.test(species_df$in_grow_range, species_df$stage)
+
+ContCoef(species_df$in_grow_range, species_df$stage, correct = FALSE)
+ContCoef(species_df$in_grow_range, species_df$stage, correct = TRUE)
+
+print("Northern Hemisphere:")
+
+chisq.test(north_species_df$in_grow_range, north_species_df$stage)
+
+ContCoef(north_species_df$in_grow_range, north_species_df$stage, correct = FALSE)
+ContCoef(north_species_df$in_grow_range, north_species_df$stage, correct = TRUE)
+
+print("southern hemisphere:")
+chisq.test(south_species_df$in_grow_range, south_species_df$stage)
+
+ContCoef(south_species_df$in_grow_range, south_species_df$stage, correct = FALSE)
+ContCoef(south_species_df$in_grow_range, south_species_df$stage, correct = TRUE)
+```
+
+summary:
+
+Number of observations plays a huge role. 
+Separating by hemisphere helps a lot. Harvest calendars will be a great source. 
+Missing data is a massive problem, if we figured out interpolation we could have ~2x as much data.
+
+How to test this? Chi-square is ok, but not complete. 
+
+Growing range from this dataset might be an incomplete assumption. 
+
+K-means clustering could help group together similar growing ranges.
+
+Also "near growing range" is important. many of the "falses" are only 1 month off. 
+
+Questions:
+Does unripe fruit include over-ripe?
+
+
+## Getting close observations 
+
+Distance function:
+distm(c(lon1, lat1), c(lon2, lat2), fun = distHaversine) 
+
+From coordinates, need to find closest observations (closest 5? weight the first one more heavily)
+```{r}
+closest_observations <-  function(input_lng, input_lat, num_locations=5) {
+    
+    distances <- apples_locations_matched %>%
+        rowwise() %>% mutate(distance = distm(c(input_lng, input_lat), c(lng, lat), fun=distHaversine)) %>%
+        select(c("location_id", "lng", "lat", "distance", "stage", "month", "month_diff", "grow_range", "in_grow_range")) %>%
+        arrange(distance)
+    
+    return(distances)
+}
+```
+
+
+```{r}
+test_obs <- closest_observations(-100, 40)[1:24,]
+
+chisq.test(test_obs$in_grow_range, test_obs$stage)
+
+ContCoef(test_obs$in_grow_range, test_obs$stage, correct = FALSE)
+ContCoef(test_obs$in_grow_range, test_obs$stage, correct = TRUE)
+```
+
+Lots of misisng values, interpolation?
+
+K-means clustering by grow season?
+```{r}
+species_k <- kmeans(obs_north 12, nstart=25)
+```
+
+## Get User data/most common stuff
+```{r}
+user_locations <- read_csv("../data/user_location_coordinates.csv")
+user_observations <- read_csv("../data/user_location_type_counts.csv")
+
+```
+
+Cluster user locations?
+Get a "lat long" to country thing
+
+Sort observations:
+```{r}
+common_plants <- user_observations[order(user_observations$count, decreasing=TRUE), ][0:10, c("count", "en_name", "scientific_name")]
+
+head(common_plants)
+```
+
+```{r}
+some_addresses <- tibble::tribble(
+~name,                  ~addr,
+"White House",          "1600 Pennsylvania Ave NW, Washington, DC",
+"Transamerica Pyramid", "600 Montgomery St, San Francisco, CA 94111",     
+"Willis Tower",         "233 S Wacker Dr, Chicago, IL 60606"                                  
+)
+
+# geocode the addresses
+lat_longs <- some_addresses %>%
+  geocode(addr, method = 'osm', lat = latitude , long = longitude)
+#> Passing 3 addresses to the Nominatim single address geocoder
+#> Query completed in: 3 seconds
+
+```
+
+```{r}
+lat_longs %>%
+  reverse_geocode(lat = latitude, long = longitude, method = 'osm',
+                  address = address_found, full_results = TRUE)
+```
+```{r}
+sample_location_tags <- user_locations[sample(nrow(user_locations), 1000), ]
+```
+
+
+```{r}
+sample_location_countries <- sample_location_tags %>%
+    reverse_geocode(lat = lat, long = lng, method = "osm", full_results = TRUE)
+
+# this will take ~82,000 seconds, or 22 hours. outsource to other team members?
+```
+```{r}
+country_freq_table <- table(sample_location_countries$country) %>% 
+    as.data.frame() %>% 
+    arrange(desc(Freq))
+country_freq_table
+```
+
+10 Most common countries:
+US, Australia, UK, France, Canada, NZ, Israel, Italy, Poland, Brazil.
