@@ -1,3 +1,7 @@
+"""
+Dump models to pickle files.
+"""
+
 import joblib
 from models import SampleModel
 

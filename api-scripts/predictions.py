@@ -1,3 +1,11 @@
+"""
+This file contains the predict function which takes in a type, location, and date
+and returns a prediction value.
+
+The predict function uses the geopy library to geocode the location and then uses
+the model to make a prediction.
+"""
+
 from datetime import date
 from geopy.geocoders import Nominatim
 import joblib
@@ -8,6 +16,10 @@ geolocator = Nominatim(user_agent="fallingfruit")
 
 
 def predict(type: str, location: str, date: date):
+    """
+    This function takes in a type, location, and date and returns a prediction value.
+    """
+
     # check if date is in the past
     if date < date.today():
         raise Exception("Invalid date. Date is in the past.")
@@ -27,7 +39,7 @@ def predict(type: str, location: str, date: date):
     except FileNotFoundError:
         raise Exception("Invalid type")
 
-    # Displaying address details
+    # Displaying result details
     print(f"Type: {type}")
     print(f"Location: {geocode_location}")
     print(f"Prediction Value: {prediction}")
