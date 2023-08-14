@@ -1,17 +1,19 @@
-import cfgrib
-import xarray as xr
+#import cfgrib
+#import xarray as xr
 
-import pandas as pd
-import numpy as np
+#import pandas as pd
+#import numpy as np
 
-from pyPhenology import models, utils
+#from pyPhenology import models, utils
 
-from tqdm import trange, tqdm
+#from tqdm import trange, tqdm
 
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 
-from warnings import warn
+#from warnings import warn
 
+
+### This file contains all functions necessary for formatting our data and processing it into a format for training. 
 
 default_models = [models.ThermalTime(), models.FallCooling(), models.M1(), models.MSB()]
 default_model_names = ['ThermalTime', "FallCooling", "M1", "MSB"]
@@ -77,6 +79,35 @@ def train_ripeness(observations, predictors, test_observations, test_predictors,
     print('Best model: {m}'.format(m=best_model_name))
     print('Best model paramters:')
     print(best_model.get_params())
+    print("Ripeness Day: {}".format(np.mean(preds)))
+    
+    ripeness_data = test_observations
+    ripeness_data['flowering_day'] = preds
+    
+    return ripeness_data
+
+# More specific to our uses.
+def train_ripeness_small(observations, predictors, test_observations, test_predictors, model_name = 'ThermalTime'):
+
+    print("running model {m}".format(m=model_name))
+    Model = utils.load_model(model_name)
+    model = Model()
+    model.fit(observations, predictors, optimizer_params='practical')
+    
+    print("making predictions for model {m}".format(m=model_name))        
+    preds = model.predict(test_observations, test_predictors)
+
+    #print(preds)
+    test_days = test_observations.doy.values
+    #print(test_days)
+
+    # score model
+    model_aic = aic(obs = test_days,
+                    pred=preds,
+                    n_param = len(model.get_params()))
+
+    print('model {m} got an aic of {a}'.format(m=model_name,a=model_aic))
+
     print("Ripeness Day: {}".format(np.mean(preds)))
     
     ripeness_data = test_observations
@@ -200,3 +231,42 @@ def claudia_observations_to_pyphenology(claudia_obs):
     new_observations['phenophase'] = 516
     
     return new_observations
+
+euro_path = "../data/formatted_euro_weather"
+euro_station_path = '../data/formatted_station_coords.csv'
+
+def load_euro_weather_data(data_path, station_path):
+    station_coords = pd.read_csv(station_path, names=["site_id", "latitude", "longitude"])
+    
+    euro_weather_data_list = []
+
+    for f in file_list:
+        file_path = os.path.join(path, f)
+        #print(file_path)
+
+        if os.path.exists(file_path):
+            temp_df = pd.read_csv(file_path, names=['site_id', 'date', 'mean_temp'])
+
+            euro_weather_data_list.append(temp_df)
+
+    full_euro_weather = pd.concat(euro_weather_data_list)
+    
+    full_euro_weather['formatted_date'] = pd.to_datetime(full_euro_weather['date'].astype(str), format='%Y%m%d')
+    
+    full_euro_weather['year'] = full_euro_weather.formatted_date.dt.to_period('Y').astype(str).astype(int)
+    full_euro_weather['doy'] = full_euro_weather.formatted_date.dt.strftime('%j').astype(int)
+    full_euro_weather['temperature'] = (full_euro_weather['mean_temp'] / 10)
+    
+    full_euro_weather.drop(['date', 'mean_temp', 'formatted_date'], axis=1, inplace=True)
+    
+    euro_weather_final = full_euro_weather.merge(station_coords, on="site_id")
+    euro_weather_final['coordstring'] = euro_weather_final['latitude'].astype(str) + euro_weather_final['longitude'].astype(str)
+
+    euro_weather_final.rename(columns={'site_id':'station'},inplace=True)
+    
+    return euro_weather_final
+
+def filter_plant_observations(formatted_plants, weather_data):
+    filtered_observations = formatted_plants[formatted_plants['site_id'].isin(corrected_leap_year_histories['site_id'])]
+    filtered_observations.dropna(inplace=True)
+    filtered_observations = filtered_observations[filtered_observations['year'] < 2023]
