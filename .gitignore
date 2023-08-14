@@ -161,3 +161,8 @@ cython_debug/
 
 # DS_Store files
 .DS_Store
+
+# grib files
+.grib
+
+data/ECA_blend_tg/*
