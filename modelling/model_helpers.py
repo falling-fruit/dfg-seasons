@@ -13,6 +13,8 @@ import numpy as np
 #from warnings import warn
 from pyPhenology import models, utils
 
+import os, glob
+
 
 ### This file contains all functions necessary for formatting our data and processing it into a format for training. 
 
@@ -106,13 +108,8 @@ def train_ripeness_small(observations, predictors, test_observations, test_predi
     #print(preds)
     test_days = test_observations.doy.values
     #print(test_days)
-
-    # score model
-    model_aic = aic(obs = test_days,
-                    pred=preds,
-                    n_param = len(model.get_params()))
     
-    # todo: implement MAE/RMSE/median error here.
+    # Various error types
     model_mae = mae(test_days, preds)
     model_rmse = rmse(test_days, preds)
     median_error = np.median(np.abs(test_days - preds))
@@ -251,10 +248,12 @@ euro_station_path = '../data/formatted_station_coords.csv'
 def load_euro_weather_data(data_path, station_path):
     station_coords = pd.read_csv(station_path, names=["site_id", "latitude", "longitude"])
     
+    file_list = list("site" + station_coords['site_id'].astype(str) + ".csv")
+    
     euro_weather_data_list = []
 
     for f in file_list:
-        file_path = os.path.join(path, f)
+        file_path = os.path.join(data_path, f)
         #print(file_path)
 
         if os.path.exists(file_path):
