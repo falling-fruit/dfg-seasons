@@ -14,6 +14,8 @@ from warnings import warn
 
 from daylength import daylength
 
+import os, glob
+
 # Format Claudia's Data
 def claudia_observations_to_pyphenology(claudia_obs):
     new_observations = claudia_obs.copy(deep=True)
