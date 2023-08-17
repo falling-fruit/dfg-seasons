@@ -1,8 +1,8 @@
 #import cfgrib
 #import xarray as xr
 
-import pandas as pd
-import numpy as np
+#import pandas as pd
+#import numpy as np
 
 #from pyPhenology import models, utils
 
@@ -11,7 +11,6 @@ import numpy as np
 #import matplotlib.pyplot as plt
 
 #from warnings import warn
-from pyPhenology import models, utils
 
 
 ### This file contains all functions necessary for formatting our data and processing it into a format for training. 
@@ -36,11 +35,6 @@ def ripeness_data_to_dict(ripeness_data):
 def aic(obs, pred, n_param):
         return len(obs) * np.log(np.mean((obs - pred)**2)) + 2*(n_param + 1)
 
-def rmse(y1, y2):
-        return np.sqrt(np.mean((y1 - y2) ** 2))
-
-def mae(y1, y2):
-        return np.mean(np.abs(y1 - y2))
 
 # Trains a model with a given set of test observations and test predictors. 
 def train_ripeness(observations, predictors, test_observations, test_predictors, models=['ThermalTime']):
@@ -111,15 +105,8 @@ def train_ripeness_small(observations, predictors, test_observations, test_predi
     model_aic = aic(obs = test_days,
                     pred=preds,
                     n_param = len(model.get_params()))
-    
-    # todo: implement MAE/RMSE/median error here.
-    model_mae = mae(test_days, preds)
-    model_rmse = rmse(test_days, preds)
-    median_error = np.median(np.abs(test_days - preds))
 
-    print('model {m} got a MAE of {a}'.format(m=model_name,a=model_mae))
-    print('model {m} got an RMSE of {a}'.format(m=model_name,a=model_rmse))
-    print('model {m}\'s median error is: {a}'.format(m=model_name,a=median_error))
+    print('model {m} got an aic of {a}'.format(m=model_name,a=model_aic))
 
     print("Ripeness Day: {}".format(np.mean(preds)))
     
@@ -278,22 +265,6 @@ def load_euro_weather_data(data_path, station_path):
     euro_weather_final.rename(columns={'site_id':'station'},inplace=True)
     
     return euro_weather_final
-
-def format_weather_data(raw_grib_df):
-    #print("Converting GRIB to dataframe")
-    new_df = raw_grib_df.drop(["number", "step", "surface"], axis=1).reset_index().rename(columns={"skt":"temperature"})
-    
-    print('formatting date columns')
-    new_df['year'] = new_df.time.dt.to_period('Y').astype(str).astype(int)
-    new_df['doy'] = new_df.time.dt.strftime('%j').astype(int)
-    
-    new_df = new_df[['temperature', 'year', 'doy', 'latitude', 'longitude']]
-    
-    print("correcting leap years")
-    corrected_df = correct_leap_years(new_df)
-    
-    return corrected_df
-    
 
 def filter_plant_observations(formatted_plants, weather_data):
     filtered_observations = formatted_plants[formatted_plants['site_id'].isin(corrected_leap_year_histories['site_id'])]
