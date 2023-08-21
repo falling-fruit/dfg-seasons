@@ -65,6 +65,9 @@ The documentation for these can be found at:
 
 
 
+The model training notebook _should_ work on new data, as long as it is in the same format. If not, feel free to email me at peterb2470@gmail.com or benson.p@northeastern.edu. 
+
+
 ## Model Training Helpers
 
 _In order of appearance in the script:_
