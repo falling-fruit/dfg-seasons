@@ -21,7 +21,52 @@ Stock Python Packages:
 
 The best approach to install and run these is to create a dedicated conda environment. Pandas has difficulty ensuring that all of the packages are compatible with each other. A tutorial on conda environments can be found [here](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#).
 
-# Claudia Data Pulling
+# Data Pulling
+
+## Overview
+The following procedure describes the process for downloading phenology data from the following sources: Plant Phenology and PEP725. 
+[Plant Phenology] (https://plantphenology.org/) utilizes the USA National Phenology Network, which provides many phenology observations across the United States.
+The [Pan European Phenology Project PEP725] (http://www.zamg.ac.at/pep725/) provides phenological data across Europe.
+
+## Tools
+[Plant Phenology] (https://plantphenology.org/), [Pan European Phenology Project PEP725] (http://www.zamg.ac.at/pep725/), Microsoft Excel, Python
+
+## Data Download - [Plant Phenology] (https://plantphenology.org/)
+First, search for the specific plant species you are interested in by their scientific name. Filter these results by 'fruits present', 'ripening fruits present', and 'ripe fruits present'. 
+At the top of the page, click the download button. The downloaded data does not include site IDs, so they must be generated.
+
+Next, run `generate_unique_ids.py`. This will generate unique site IDs for each observation and output a new file containing 'site_id'.
+
+## Data Download - [Pan European Phenology Project PEP725] (http://www.zamg.ac.at/pep725/)
+Users must have an account to download any data. On the homepage menu, navigate to the data selection page. Using the dropdown menu, select the plant species of interest. 
+The data is organized based on cultivar type and country. Click the download button for each country and cultivar type of interest. The downloaded data is not properly formatted for our needs, so it must be transformed.
+
+In Microsoft Excel, first, navigate to 'Data' and click 'Get Data (Power Query)'. 
+Next, click 'Text/CSV' to import data from the original downloaded csv file. Load the downloaded csv file titled “PEP725_XX_scientificName.csv”. Ensure the delimiter is "Semicolon".
+This should organize the data into proper columns.
+Repeat this transformation process for the downloaded csv file titled “PEP725_XX_stations.csv”.
+
+Open these new csv files, and using the BBCH codes provided in the original downloaded folder, determine which observations correlate with the presence of ripe fruit. Remove any rows that do not meet this criterion.
+On the csv file, rename the BBCH code with the observation description (ex. BBCH code 86 -> "Ripe fruits")
+
+Next, run `merge_pep.py`. This will merge the two datasets - “PEP725_XX_scientificName.csv” and “PEP725_XX_stations.csv” - and output a new file.
+Open the new merged dataset and delete the following unnecessary columns - 'National _ID', 'ALT', and 'NAME'.
+
+## Combining Datasets
+Before merging datasets, ensure that all the datasets have identical column titles; otherwise, some data may be lost due to varying column titles.
+
+DAY: the day of the year the observation was made
+YEAR: the year the observation was made
+genus: the taxonomic rank above species and below family; the first part of a scientific name for a species
+specificEpithet: the second part of a scientific name, specifying the name of the species
+eventRemarks: the observation description 
+LAT: latitude; the distance north or south of the equator
+LON: longitude; the distance east or west of the meridian
+site_id: a unique identifier indicating the specific geographical location of an observation site 
+
+Now, run `combine_datasets.py`. This will combine all the phenology datasets and export a new file.
+
+Now this plant species phenology dataset is ready to be used for model training!
 
 # Data Formatting and Mode Training
 
