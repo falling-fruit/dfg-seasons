@@ -74,10 +74,43 @@ This will train several models – one with all the plant observations, one that
 To train models using weather data from the future, you will first need a time machine. This can be found in `time_machine/blueprints_for_time_machine.py`. 
 (Just kidding – there's no time machine).  
 
-
-## Model Training Helpers
-
 If you want to train/test these models again next year, you will need ERA-5 monthly data from the previous year. You will also need updated phenology observations. 
 The documentation for these can be found at:
 
+
+
+## Model Training Helpers
+
+_In order of appearance in the script:_
+
+The high cutoff year is set in this script as a global variable. This controls the slicing of test data. 
+
+Next, there are error functions. MAE and RMSE are uesd to score the models. 
+
+`make_test_df` creates a mock dataframe to be used for testing / model scoring. This is only used if there are no observations in the test year available. The mock dataframe consists of the mean observed ripeness day for the training data, but in 2022. This should give a good impression of the average ripeness day at that site. Howeve, there is some risk of overtraining with this approach. 
+
+`train_ripeness_small` trains the ThermalTime model. Training is very easy, but testing is actually the difficult part. There are some considerations with missing data during testing, so the actual input to the predict function is filtered by site ID. Also, sometimes, the model returns a prediction of 999, so I just filter these out. Then, I print the model and score it. 
+
+`claudia_observations_to_pyphenology` performs some basic formatting steps, but is used only in `construct_phenology_observations.py`. 
+
+`correct_leap_years` maps all months onto the same 12 values. This effectively removes all leap years from the data. Only really works for monthly data. 
+
+`format_weather_data` formats a dataframe converted straight from a GRIB file into a usable dataframe. Mostly this is basic date formatting stuff, column renaming, etc. 
+
+`train_species_models`. This is the biggest function in the whole thing, combining all the other ones. This trains a unique model for each species. The biggest challenge is missing data. There are some types of missing data that are simply impossible to fix, like no training data or no weather data. 
+
+One that is possible to fix is a lack of test data. To correct for this, I use the `make_test_df` function, which interpolates mock test sites. 
+
+This function iterates through all species in the given plant dataframe, and returns two things: a list of models (list of dicts, with "species" and "model" fields. Useful for saving model parameters if desired.); and a dataframe containing predictions. This is processed during model scoring, but 
+
+`score_model` prints various model error metrics. Number of species is useful for comparing how many species had enough data to train. For example, with European models, the number of species was often quite low (<10). 
+
+MAE stands for Mean Absolute Error. The functions for this and RMSE can be found at the top. 
+
+Median Absolute Error is a useful metric in this case. The absolute error is heavily right-skewed, meaning that there are many cases of small errors, and a few cases of large errors. The median error gives the threshold where 50% of predictions have an error less than the median. For example, a median of 10 would mean that 50% of the predictions are within 10 days of the observed value. 
+
+SD portion represents the portion of plants that lie under 1 standard deviation of the data. 
+This calculation is repeated for a 1-month threshold and a 2*SD threshold. 
+
+For example, if the month portion was 0.9, it would mean that 90% of the predictions fell within 1 month of the observed date. 
 
