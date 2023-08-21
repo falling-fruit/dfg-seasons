@@ -32,17 +32,17 @@ The Pan European Phenology Project PEP725 (found [here](http://www.zamg.ac.at/pe
 [Plant Phenology](https://pyphenology.readthedocs.io/en/master/data_structures.html),  [PEP725](http://www.zamg.ac.at/pep725/), Microsoft Excel, Python
 
 ## Data Download - [Plant Phenology](https://pyphenology.readthedocs.io/en/master/data_structures.html)
-First, search for the specific plant species you are interested in by their scientific name. Filter these results by 'fruits present', 'ripening fruits present', and 'ripe fruits present'. 
+First, search for the specific plant species you are interested in by their scientific name. Filter these results by _fruits present_, _ripening fruits present_, and _ripe fruits present_. 
 At the top of the page, click the download button. The downloaded data does not include site IDs, so they must be generated.
 
 Next, run `generate_unique_ids.py`. This will generate unique site IDs for each observation and output a new file containing 'site_id'.
 
 ## Data Download - [Pan European Phenology Project PEP725](http://www.zamg.ac.at/pep725/)
-Users must have an account to download any data. On the homepage menu, navigate to the data selection page. Using the dropdown menu, select the plant species of interest. 
+Users must have an account to download any data. On the homepage menu, navigate to the _data selection_ page. Using the dropdown menu, select the plant species of interest. 
 The data is organized based on cultivar type and country. Click the download button for each country and cultivar type of interest. The downloaded data is not properly formatted for our needs, so it must be transformed.
 
 In Microsoft Excel, first, navigate to 'Data' and click 'Get Data (Power Query)'. 
-Next, click 'Text/CSV' to import data from the original downloaded csv file. Load the downloaded csv file titled “PEP725_XX_scientificName.csv”. Ensure the delimiter is "Semicolon".
+Next, click _Text/CSV_ to import data from the original downloaded csv file. Load the downloaded csv file titled “PEP725_XX_scientificName.csv”. Ensure the delimiter is _Semicolon_.
 This should organize the data into proper columns.
 Repeat this transformation process for the downloaded csv file titled “PEP725_XX_stations.csv”.
 
