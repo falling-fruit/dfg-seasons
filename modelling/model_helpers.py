@@ -15,25 +15,13 @@ from pyPhenology import models, utils
 
 import os, glob
 
+from tqdm import trange, tqdm
+
 
 ### This file contains all functions necessary for formatting our data and processing it into a format for training. 
 
-default_models = [models.ThermalTime(), models.FallCooling(), models.M1(), models.MSB()]
-default_model_names = ['ThermalTime', "FallCooling", "M1", "MSB"]
-
-# Turns a dataframe containing predictions of flowering day to a dict? Not sure what this does. 
-def ripeness_data_to_dict(ripeness_data):    
-    
-    mean_maturation = np.mean(ripeness_data['flowering_day'])
-    
-    prediction_dict = {
-        "full_flowering_data": ripeness_data,
-        #"species_site_flowering days": list(ripeness_data['flowering_day']),
-        "mean_flowering_day": np.mean(ripeness_data['flowering_day'])
-    }
-    
-    return prediction_dict
-
+### CUTOFF YEAR = 2022
+high_cutoff_year = 2022
 
 def aic(obs, pred, n_param):
         return len(obs) * np.log(np.mean((obs - pred)**2)) + 2*(n_param + 1)
@@ -44,57 +32,31 @@ def rmse(y1, y2):
 def mae(y1, y2):
         return np.mean(np.abs(y1 - y2))
 
-# Trains a model with a given set of test observations and test predictors. 
-def train_ripeness(observations, predictors, test_observations, test_predictors, models=['ThermalTime']):
-    # set up model comparisons
-    best_aic=np.inf
-    best_model = None
-    best_model_name = None
-
-    # iterate through all models
-    for model_name in models:
-        print("running model {m}".format(m=model_name))
+# Interpolate testing data from training data (mean)
+def make_test_df(train_df):
+    #print(train_df)
+    species_sites = train_df['site_id'].unique()
         
-        Model = utils.load_model(model_name)
-        model = Model()
-        model.fit(observations, predictors, optimizer_params='practical')
-        
-        # predict from test observations
-        print("making predictions for model {m}".format(m=model_name))        
-        preds = model.predict(test_observations, test_predictors)
-        
-        #print(preds)
-        test_days = test_observations.doy.values
-        #print(test_days)
-        # this isn't valid - need to filter by site IDs
-        
-        # THIS IS REALLY BAD:
-        test_days = test_days[0:len(preds)]
-        #print(test_days)
-        
-        # score model
-        model_aic = aic(obs = test_days,
-                        pred=preds,
-                        n_param = len(model.get_params()))
-
-        if model_aic < best_aic:
-            best_model = model
-            best_model_name = model_name
-            best_aic = model_aic
-
-        print('model {m} got an aic of {a}'.format(m=model_name,a=model_aic))
-
-    print('Best model: {m}'.format(m=best_model_name))
-    print('Best model paramters:')
-    print(best_model.get_params())
-    print("Ripeness Day: {}".format(np.mean(preds)))
+    #print(species_sites)
     
-    ripeness_data = test_observations
-    ripeness_data['flowering_day'] = preds
-    
-    return ripeness_data
+    site_ripenesses = []
 
-# More specific to our uses.
+    for site in species_sites:
+        site_df = train_df[train_df['site_id'] == site]
+
+        site_ripenesses.append({
+            'site_id': site,
+            'doy': np.mean(site_df['doy'])
+        })
+
+    species_test_df = pd.DataFrame(site_ripenesses)
+    species_test_df['year'] = high_cutoff_year
+    
+    species_test_df['formatted_sci_name'] = train_df['formatted_sci_name'].iloc[0]
+    
+    return species_test_df
+
+# Training function specific to our uses.
 def train_ripeness_small(observations, predictors, test_observations, test_predictors, model_name = 'ThermalTime'):
 
     print("running model {m}".format(m=model_name))
@@ -102,13 +64,41 @@ def train_ripeness_small(observations, predictors, test_observations, test_predi
     model = Model()
     model.fit(observations, predictors, optimizer_params='practical')
     
-    print("making predictions for model {m}".format(m=model_name))        
-    preds = model.predict(test_observations, test_predictors)
-
-    #print(preds)
-    test_days = test_observations.doy.values
-    #print(test_days)
+    print(model)
     
+    print("making predictions for model {m}".format(m=model_name))
+    
+    pred_list = []
+    
+    # assuming year is the same for both test obs and test preds
+    for s in test_observations['site_id'].unique():
+        site_obs = test_observations[test_observations['site_id'] == s]
+        site_prediction = model.predict(site_obs, test_predictors)
+        
+        if len(site_prediction) > 0 and site_prediction[0] < 999:
+            pred_list.append({
+                'site_id': s,
+                'formatted_sci_name': test_observations['formatted_sci_name'].iloc[0],
+                'prediction': site_prediction[0],
+                'doy': site_obs['doy'].iloc[0]
+            })
+        
+    #print(pred_list)
+    
+    pred_df = pd.DataFrame.from_records(pred_list)
+    
+    #print(pred_df)
+    
+    preds = pred_df['prediction']
+    test_days = pred_df['doy']
+    sites = pred_df['site_id']
+
+    if len(preds) == 0:
+        print(test_observations)
+        print(test_predictors)
+    
+    #print(pred_list)
+   
     # Various error types
     model_mae = mae(test_days, preds)
     model_rmse = rmse(test_days, preds)
@@ -120,110 +110,20 @@ def train_ripeness_small(observations, predictors, test_observations, test_predi
 
     print("Ripeness Day: {}".format(np.mean(preds)))
     
-    ripeness_data = test_observations
-    ripeness_data['flowering_day'] = preds
+    #filtered_test_observations = test_observations[test_observations['site_id'].isin(sites)]
     
-    return ripeness_data
-
-# Trains a model and uses a portion of the training data for testing. 
-def train_ripeness_percent(observations, predictors, test_percent, models=['ThermalTime']):
-    test_observations = observations.sample(frac=test_percent)
-    observations_train = observations.drop(test_observations.index)
+    ripeness_data = pred_df
+    ripeness_data['ripeness_day'] = ripeness_data['prediction']
     
-    # set up model comparisons
-    best_aic=np.inf
-    best_model = None
-    best_model_name = None
-
-    # iterate through all models
-    for model_name in models:
-        print("running model {m}".format(m=model_name))
-        
-        Model = utils.load_model(model_name)
-        model = Model()
-        model.fit(observations_train, predictors, optimizer_params='practical')
-        
-        # predict from test observations
-        print("making predictions for model {m}".format(m=model_name))        
-        preds = model.predict(test_observations, predictors)
+    ripeness_dict = {
+        'model_object': model,
+        'MAE': model_mae,
+        'RMSE': model_rmse,
+        'Median Error': median_error,
+        'prediction_df': ripeness_data,
+    }
     
-        #print(preds)
-        test_days = test_observations.doy.values
-        #print(test_days)
-        
-        # THIS IS REALLY BAD:
-        test_days = test_days[0:len(preds)]
-        #print(test_days)
-        
-        # score model
-        model_aic = aic(obs = test_days,
-                        pred=preds,
-                        n_param = len(model.get_params()))
-        print(model_aic)
-
-        if model_aic < best_aic:
-            best_model = model
-            best_model_name = model_name
-            best_aic = model_aic
-
-        print('model {m} got an aic of {a}'.format(m=model_name,a=model_aic))
-
-    print('Best model: {m}'.format(m=best_model_name))
-    print('Best model paramters:')
-    print(best_model.get_params())
-    print("Ripeness Day: {}".format(np.mean(preds)))
-    
-    ripeness_data = test_observations
-    ripeness_data['flowering_day'] = preds
-    
-    return ripeness_data
-
-
-# Gets the weather history for a specific site. 
-def get_site_history(weather_array, site_id, site_lat, site_lon):
-    filtered = weather_array.where((abs(weather_array.latitude - site_lat) <= 0.05) & (abs(weather_array.longitude - site_lon) <= 0.05), drop=True)
-    
-    #print("Converting GRIB to dataframe")
-    site_df = filtered.to_dataframe().drop(["number", "step", "surface"], axis=1).reset_index().rename(columns={"skt":"temperature"})
-    
-    site_df['site_id'] = site_id
-    
-    site_df['year'] = site_df.time.dt.to_period('Y')
-    site_df['doy'] = site_df.time.dt.strftime('%j').astype(int)
-    
-    site_df = site_df[['site_id', 'temperature', 'year', 'doy', 'latitude', 'longitude']]
-    
-    return(site_df)
-
-def get_site_history_coarse(weather_array, site_id, site_lat, site_lon):
-    filtered = weather_array.where((abs(weather_array.latitude - site_lat) <= 0.5) & (abs(weather_array.longitude - site_lon) <= 0.5), drop=True)
-    
-    #print("Converting GRIB to dataframe")
-    site_df = filtered.to_dataframe().drop(["number", "step", "surface"], axis=1).reset_index().rename(columns={"skt":"temperature"})
-    
-    site_df['site_id'] = site_id
-    
-    site_df['year'] = site_df.time.dt.to_period('Y')
-    site_df['doy'] = site_df.time.dt.strftime('%j').astype(int)
-    
-    site_df = site_df[['site_id', 'temperature', 'year', 'doy', 'latitude', 'longitude']]
-    
-    return(site_df)
-
-def correct_leap_years(weather_df):
-    leap_year_key = {60: 61, 
-                 91: 92, 
-                 121: 122, 
-                 152: 153, 
-                 182: 183, 
-                 213: 214, 
-                 244: 245, 
-                 274: 275, 
-                 305: 306, 
-                 335: 336}
-    
-    return weather_df.replace({'doy': leap_year_key})
-
+    return model, ripeness_dict
 
 # Format Claudia's Data
 def claudia_observations_to_pyphenology(claudia_obs):
@@ -242,44 +142,22 @@ def claudia_observations_to_pyphenology(claudia_obs):
     
     return new_observations
 
-euro_path = "../data/formatted_euro_weather"
-euro_station_path = '../data/formatted_station_coords.csv'
-
-def load_euro_weather_data(data_path, station_path):
-    station_coords = pd.read_csv(station_path, names=["site_id", "latitude", "longitude"])
+def correct_leap_years(weather_df):
+    leap_year_key = {60: 61, 
+                 91: 92, 
+                 121: 122, 
+                 152: 153, 
+                 182: 183, 
+                 213: 214, 
+                 244: 245, 
+                 274: 275, 
+                 305: 306, 
+                 335: 336}
     
-    file_list = list("site" + station_coords['site_id'].astype(str) + ".csv")
-    
-    euro_weather_data_list = []
+    return weather_df.replace({'doy': leap_year_key})
 
-    for f in file_list:
-        file_path = os.path.join(data_path, f)
-        #print(file_path)
-
-        if os.path.exists(file_path):
-            temp_df = pd.read_csv(file_path, names=['site_id', 'date', 'mean_temp'])
-
-            euro_weather_data_list.append(temp_df)
-
-    full_euro_weather = pd.concat(euro_weather_data_list)
-    
-    full_euro_weather['formatted_date'] = pd.to_datetime(full_euro_weather['date'].astype(str), format='%Y%m%d')
-    
-    full_euro_weather['year'] = full_euro_weather.formatted_date.dt.to_period('Y').astype(str).astype(int)
-    full_euro_weather['doy'] = full_euro_weather.formatted_date.dt.strftime('%j').astype(int)
-    full_euro_weather['temperature'] = (full_euro_weather['mean_temp'] / 10)
-    
-    full_euro_weather.drop(['date', 'mean_temp', 'formatted_date'], axis=1, inplace=True)
-    
-    euro_weather_final = full_euro_weather.merge(station_coords, on="site_id")
-    euro_weather_final['coordstring'] = euro_weather_final['latitude'].astype(str) + euro_weather_final['longitude'].astype(str)
-
-    euro_weather_final.rename(columns={'site_id':'station'},inplace=True)
-    
-    return euro_weather_final
-
-def format_weather_data(raw_grib_df):
-    #print("Converting GRIB to dataframe")
+def format_weather_data(raw_grib_df, correct_leap_year=True):
+    print("Converting GRIB to dataframe")
     new_df = raw_grib_df.drop(["number", "step", "surface"], axis=1).reset_index().rename(columns={"skt":"temperature"})
     
     print('formatting date columns')
@@ -288,13 +166,141 @@ def format_weather_data(raw_grib_df):
     
     new_df = new_df[['temperature', 'year', 'doy', 'latitude', 'longitude']]
     
-    print("correcting leap years")
-    corrected_df = correct_leap_years(new_df)
+    if correct_leap_year:
+        print("correcting leap years")
+        new_df = correct_leap_years(new_df)
+
+    print("rounding columns and constructing site ID")
+    new_df['latitude'] = np.round(new_df['latitude'], 1)
+    new_df['longitude'] = np.round(new_df['longitude'], 1)
+
+    new_df['coordstring'] = new_df['latitude'].astype(str) + new_df['longitude'].astype(str)
+
+    new_df['site_id'] = new_df['coordstring'].str.replace(".", "")
     
-    return corrected_df
+    return new_df
+
+
+## THE TRAINING FUNCTION. 
+
+# This function takes in your plant data and weather data and:
+# Separates into training/testing
+# Trains a unique model for each species. 
+# If there isn't enough test data, test data is created by interpolating the mean ripeness of training data for each site. 
+# Concatenates the predictions into one dataframe. 
+
+# Train threshold is the minimum observations required to train a model of a given species.
+# Test threshold is the same, but for test data. If this falls short, test data will be interpolated. 
+def train_species_models(full_plant_data, full_weather_data, train_threshold=10, test_threshold=1, save_dir='trained_models'):
+    trained_models = []
+    
+    # Separate weather data into train and test
+    weather_training = full_weather_data[full_weather_data['year'] < high_cutoff_year]
+    weather_test = full_weather_data[full_weather_data['year'] >= high_cutoff_year]
+    
+    species_prediction_dict = {}
+    species_list = full_plant_data['formatted_sci_name'].unique()
+    print(species_list)
+
+    for s in tqdm(species_list):
+        print("\n\n", s)
+        species_train_df = full_plant_data.query('formatted_sci_name == "{}" and year < {}'.format(s, high_cutoff_year))
+        
+        #print(species_train_df)
+        if len(species_train_df) < train_threshold:
+            print("not enough training data")
+            continue        
+        
+        species_test_df = full_plant_data.query('formatted_sci_name == "{}" and year >= {}'.format(s, high_cutoff_year))
+
+        if len(species_test_df) < test_threshold:
+            print("Not enough test data for {}, interpolating".format(s))
+            # make predictions and compare to the mean ripeness day at each site
+            species_test_df = make_test_df(full_plant_data)
+
+        if len(species_test_df) == 0:
+            print("No test data for {}, after attempt at rectification".format(s))
+            #print(species_test_df)
+        
+        if len(weather_test) == 0:
+            print("No weather data")
+            continue
+            
+        filtered_weather_test = weather_test[weather_test['site_id'].isin(species_test_df['site_id'])]
+        filtered_species_test = species_test_df[species_test_df['site_id'].isin(filtered_weather_test['site_id'])]
+        
+        #print(species_train_df, weather_training)
+        #print(species_test_df)
+        #print(filtered_weather_test)
+        #print(np.sort(filtered_species_test['site_id'].unique()))
+        #print(np.sort(filtered_weather_test['site_id'].unique()))
+        
+        print("Training Observations: ", len(species_train_df))
+        print("Testing Observations: ", len(filtered_species_test))
+        
+        model, predictions = train_ripeness_small(species_train_df, weather_training,
+                            filtered_species_test, filtered_weather_test)
+        
+        trained_models.append(model)
+        
+        # Save the model for later
+        # model.save_params(os.path.join(save_dir, s))
+        #save_model(model, s, save_dir) 
+
+        #break
+        
+        species_prediction_dict[s] = predictions
+    
+    #print(species_prediction_dict)
+        
+    # gets a list of all the prediction dataframes from the species model
+    df_list = [i['prediction_df'] for i in species_prediction_dict.values()]
+
+    full_prediction_df = pd.concat(df_list)
+
+    full_prediction_df['abs_error'] = np.abs(full_prediction_df['doy'] - full_prediction_df['ripeness_day'])
+    
+    #print(score_model(full_prediction_df))
+    
+    return trained_models, full_prediction_df
+
+  
+## STATS / MODEL SCORING
+
+# Prints various error metrics. Takes in a prediction df (from train_species_models).
+def score_model(prediction_df):
+    observed = prediction_df['doy']
+    predicted = prediction_df['ripeness_day']
+    
+    n_species = prediction_df['formatted_sci_name'].nunique()
+    
+    print("Number of Species:", n_species)
+    
+    median_err = np.round(np.median(prediction_df['abs_error']), 2)
+    std = np.round(np.std(prediction_df['abs_error']), 2)
+    
+    # MAE, RMSE, median
+    
+    print("Error metrics:")
+    print("MAE:", np.round(mae(observed, predicted), 2))
+    print("RMSE:", np.round(rmse(observed, predicted), 2))
+    print("Median Absolute Error:", np.round(median_err, 2))
+    
+    # portion of errors under the SD
+    print("SD portion (SD = {})".format(std))
+    print(np.round(len(prediction_df.query('abs_error < {}'.format(std))) / len(prediction_df), 2))
+    
+    print("Month threshold:")
+    print(np.round(len(prediction_df.query('abs_error < 30')) / len(prediction_df), 2))
+
+    # 
+    print("2 * SD portion (2SD = {})".format(2 * std))
+    print(np.round(len(prediction_df.query('abs_error < {}'.format(2 * std))) / len(prediction_df), 2))
     
 
-def filter_plant_observations(formatted_plants, weather_data):
-    filtered_observations = formatted_plants[formatted_plants['site_id'].isin(corrected_leap_year_histories['site_id'])]
-    filtered_observations.dropna(inplace=True)
-    filtered_observations = filtered_observations[filtered_observations['year'] < 2023]
+# get how "good" one sample is compared to the whole sample
+def calc_error_percentile(sample, full_sample):
+    sample_median = np.median(sample['abs_error'])
+    
+    print(sample_median)
+    print(1 - len(full_sample.query('abs_error < {}'.format(sample_median))) / len(full_sample))
