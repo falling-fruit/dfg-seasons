@@ -65,7 +65,7 @@ The documentation for these can be found at:
 
 
 
-The model training notebook _should_ work on new data, as long as it is in the same format. If not, feel free to email me at peterb2470@gmail.com or benson.p@northeastern.edu. 
+The model training notebook _should_ work on new data, as long as it is in the same format. You will need to update the high_cutoff_year global variable to 2023. If anything isn't working, feel free to email me at peterb2470@gmail.com or benson.p@northeastern.edu. 
 
 
 ## Model Training Helpers
