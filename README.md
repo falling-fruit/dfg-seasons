@@ -54,6 +54,8 @@ Here are some sample coordinates, and the pipeline to get to Site IDs:
 
 These scripts assume you are running them from `modelling`. 
 
+Many of the features used in the model training are stored in `modelling/model_training_helpers.py`. It is not necessary to have a complete understanding of everything going on in there, but I will give a brief summary at the end of this document. 
+
 ## Model Training Steps
 
 First, run `construct_phenology_observations.py`. This will merge the data collected from NPN, PEP-5, and Falling Fruit into one dataframe. 
@@ -61,5 +63,21 @@ This will output a file to `data/model_training_data/all_plants_formatted.csv`.
 
 Next, download the monthly high-res weather data from this link: (monthly_weather_data.grib)[https://drive.google.com/file/d/157JrxJsks9EmWLjyz1ERITu-Ds9mBo6M/view?usp=drive_link]. 
 Put the weather data in the following directory: `data/weather_data/monthly_weather_data.grib`. 
+
+After this, you are all set to run the model training notebook!
+
+For Monthly Data (the default, and best model), run all the cells in `Train from Monthly Data.ipynb`. 
+This will train several models – one with all the plant observations, one that's aggressively filtered to only include observations in the "normal growing range", and one filtered to not include tropical observations. 
+
+## Future Use
+
+To train models using weather data from the future, you will first need a time machine. This can be found in `time_machine/blueprints_for_time_machine.py`. 
+(Just kidding – there's no time machine).  
+
+
+## Model Training Helpers
+
+If you want to train/test these models again next year, you will need ERA-5 monthly data from the previous year. You will also need updated phenology observations. 
+The documentation for these can be found at:
 
 
