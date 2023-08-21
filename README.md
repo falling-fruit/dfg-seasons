@@ -41,12 +41,25 @@ The best approach to install and run these is to create a dedicated conda enviro
 
 # Data Formatting and Mode Training
 
+## Overview & Special Considerations
 pyPhenology requires a very strict data structure (found [here](https://pyphenology.readthedocs.io/en/master/data_structures.html)). It takes both plant data and weather data in the form of pandas dataframes. 
 Crucially, these both need a "Site ID" column for this to function properly. 
 Also, the Longitude coordinates in ERA-5 are **360-degree longitude**. I converted the longitude column from the plant observations, which is in 180 by default, to 360-degree. 
+
 My approach here was to construct the site ID column based on the **Rounded Lat/Long Coordinates** of the sites. 
 This means that the site IDs in the model training scripts **Do Not Match** with the Falling Fruit Site IDs. However, it would be fairly easy to match these based on coordinates. 
 Here are some sample coordinates, and the pipeline to get to Site IDs:
 
-- (45.259, 222.885) -> (rounding step) -> (45.3, 222.9) -> (removing decimals) -> (453, 2229) -> (string concatenation) -> "4532229". 
+(45.259, 222.885) -> (rounding step) -> (45.3, 222.9) -> (removing decimals) -> (453, 2229) -> (string concatenation) -> "4532229". 
+
+These scripts assume you are running them from `modelling`. 
+
+## Model Training Steps
+
+First, run `construct_phenology_observations.py`. This will merge the data collected from NPN, PEP-5, and Falling Fruit into one dataframe. 
+This will output a file to `data/model_training_data/all_plants_formatted.csv`. 
+
+Next, download the monthly high-res weather data from this link: (monthly_weather_data.grib)[https://drive.google.com/file/d/157JrxJsks9EmWLjyz1ERITu-Ds9mBo6M/view?usp=drive_link]. 
+Put the weather data in the following directory: `data/weather_data/monthly_weather_data.grib`. 
+
 
