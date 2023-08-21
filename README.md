@@ -1,21 +1,5 @@
 # Develop for Good – Seasonality Prediction
 
-### Model Training
-
-This model requires historical weather data drawn from this google drive link:
-
-https://drive.google.com/file/d/157JrxJsks9EmWLjyz1ERITu-Ds9mBo6M/view?usp=drive_link
-
-Before training a model, make sure to download this into the data/ folder of this repo.
-
-**Formatted Training Data:**
- 
-Weather data: https://drive.google.com/file/d/1nhahu2ei0QS9ITlGz2C_d4XvLfdXUCPH/view?usp=drive_link
-
-Observation data: https://drive.google.com/file/d/16OkaqtXTYisJDVMYl1pK_Mtz1NbvRiMG/view?usp=drive_link
-
-High-resolution weather data: https://drive.google.com/drive/folders/1nRuce11OdWAWnioUPt_C9Y9LBQp562AH?usp=drive_link
-
 # Running Environment:
 Package requirements:
 ```
@@ -61,7 +45,9 @@ Many of the features used in the model training are stored in `modelling/model_t
 First, run `construct_phenology_observations.py`. This will merge the data collected from NPN, PEP-5, and Falling Fruit into one dataframe. 
 This will output a file to `data/model_training_data/all_plants_formatted.csv`. 
 
-Next, download the monthly high-res weather data from this link: (monthly_weather_data.grib)[https://drive.google.com/file/d/157JrxJsks9EmWLjyz1ERITu-Ds9mBo6M/view?usp=drive_link]. 
+This file can also be downloaded from [here](https://drive.google.com/file/d/16OkaqtXTYisJDVMYl1pK_Mtz1NbvRiMG/view?usp=drive_link)
+
+Next, download the monthly high-res weather data from this link: [monthly_weather_data.grib](https://drive.google.com/file/d/157JrxJsks9EmWLjyz1ERITu-Ds9mBo6M/view?usp=drive_link). 
 Put the weather data in the following directory: `data/weather_data/monthly_weather_data.grib`. 
 
 After this, you are all set to run the model training notebook!
@@ -77,6 +63,9 @@ To train models using weather data from the future, you will first need a time m
 If you want to train/test these models again next year, you will need ERA-5 monthly data from the previous year. You will also need updated phenology observations. 
 The documentation for these can be found at:
 
+
+
+The model training notebook _should_ work on new data, as long as it is in the same format. If not, feel free to email me at peterb2470@gmail.com or benson.p@northeastern.edu. 
 
 
 ## Model Training Helpers
