@@ -23,6 +23,7 @@ from tqdm import trange, tqdm
 ### CUTOFF YEAR = 2022
 high_cutoff_year = 2022
 
+## ERROR FUNCTIONS
 def aic(obs, pred, n_param):
         return len(obs) * np.log(np.mean((obs - pred)**2)) + 2*(n_param + 1)
 
@@ -79,7 +80,7 @@ def train_ripeness_small(observations, predictors, test_observations, test_predi
             pred_list.append({
                 'site_id': s,
                 'formatted_sci_name': test_observations['formatted_sci_name'].iloc[0],
-                'prediction': site_prediction[0],
+                'ripeness_day': site_prediction[0],
                 'doy': site_obs['doy'].iloc[0]
             })
         
@@ -110,17 +111,12 @@ def train_ripeness_small(observations, predictors, test_observations, test_predi
 
     print("Ripeness Day: {}".format(np.mean(preds)))
     
-    #filtered_test_observations = test_observations[test_observations['site_id'].isin(sites)]
-    
-    ripeness_data = pred_df
-    ripeness_data['ripeness_day'] = ripeness_data['prediction']
-    
     ripeness_dict = {
         'model_object': model,
         'MAE': model_mae,
         'RMSE': model_rmse,
         'Median Error': median_error,
-        'prediction_df': ripeness_data,
+        'prediction_df': pred_df,
     }
     
     return model, ripeness_dict
@@ -209,14 +205,18 @@ def train_species_models(full_plant_data, full_weather_data, train_threshold=10,
         #print(species_train_df)
         if len(species_train_df) < train_threshold:
             print("not enough training data")
-            continue        
+            continue
+        
+        if len(weather_test) == 0:
+            print("No weather data")
+            continue
         
         species_test_df = full_plant_data.query('formatted_sci_name == "{}" and year >= {}'.format(s, high_cutoff_year))
 
         if len(species_test_df) < test_threshold:
             print("Not enough test data for {}, interpolating".format(s))
             # make predictions and compare to the mean ripeness day at each site
-            species_test_df = make_test_df(full_plant_data)
+            species_test_df = make_test_df(species_train_df)
 
         if len(species_test_df) == 0:
             print("No test data for {}, after attempt at rectification".format(s))
@@ -225,12 +225,14 @@ def train_species_models(full_plant_data, full_weather_data, train_threshold=10,
         if len(weather_test) == 0:
             print("No weather data")
             continue
-            
+        
+        #print(species_test_df)
         filtered_weather_test = weather_test[weather_test['site_id'].isin(species_test_df['site_id'])]
         filtered_species_test = species_test_df[species_test_df['site_id'].isin(filtered_weather_test['site_id'])]
         
         #print(species_train_df, weather_training)
-        #print(species_test_df)
+        #print(filtered_species_test)
+        #print(filtered_species_test.drop_duplicates())
         #print(filtered_weather_test)
         #print(np.sort(filtered_species_test['site_id'].unique()))
         #print(np.sort(filtered_weather_test['site_id'].unique()))
@@ -241,13 +243,10 @@ def train_species_models(full_plant_data, full_weather_data, train_threshold=10,
         model, predictions = train_ripeness_small(species_train_df, weather_training,
                             filtered_species_test, filtered_weather_test)
         
-        trained_models.append(model)
+        model_dict = {'species':s,
+                     'model':model}
         
-        # Save the model for later
-        # model.save_params(os.path.join(save_dir, s))
-        #save_model(model, s, save_dir) 
-
-        #break
+        trained_models.append(model_dict)
         
         species_prediction_dict[s] = predictions
     
