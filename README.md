@@ -45,9 +45,9 @@ Many of the features used in the model training are stored in `modelling/model_t
 First, run `construct_phenology_observations.py`. This will merge the data collected from NPN, PEP-5, and Falling Fruit into one dataframe. 
 This will output a file to `data/model_training_data/all_plants_formatted.csv`. 
 
-This file can also be downloaded from (here)[https://drive.google.com/file/d/16OkaqtXTYisJDVMYl1pK_Mtz1NbvRiMG/view?usp=drive_link]
+This file can also be downloaded from [here](https://drive.google.com/file/d/16OkaqtXTYisJDVMYl1pK_Mtz1NbvRiMG/view?usp=drive_link)
 
-Next, download the monthly high-res weather data from this link: (monthly_weather_data.grib)[https://drive.google.com/file/d/157JrxJsks9EmWLjyz1ERITu-Ds9mBo6M/view?usp=drive_link]. 
+Next, download the monthly high-res weather data from this link: [monthly_weather_data.grib](https://drive.google.com/file/d/157JrxJsks9EmWLjyz1ERITu-Ds9mBo6M/view?usp=drive_link). 
 Put the weather data in the following directory: `data/weather_data/monthly_weather_data.grib`. 
 
 After this, you are all set to run the model training notebook!
