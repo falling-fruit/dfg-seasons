@@ -26,18 +26,18 @@ The best approach to install and run these is to create a dedicated conda enviro
 ## Overview
 The following procedure describes the process for downloading phenology data from the following sources: Plant Phenology and PEP725. 
 Plant Phenology (found [here](https://pyphenology.readthedocs.io/en/master/data_structures.html)) utilizes the USA National Phenology Network, which provides many phenology observations across the United States.
-The Pan European Phenology Project PEP725 (found [here](http://www.zamg.ac.at/pep725/) provides phenological data across Europe.
+The Pan European Phenology Project PEP725 (found [here](http://www.zamg.ac.at/pep725/)) provides phenological data across Europe.
 
 ## Tools
 [Plant Phenology](https://pyphenology.readthedocs.io/en/master/data_structures.html),  [PEP725](http://www.zamg.ac.at/pep725/), Microsoft Excel, Python
 
-## Data Download - [Plant Phenology] (https://plantphenology.org/)
+## Data Download - [Plant Phenology](https://pyphenology.readthedocs.io/en/master/data_structures.html)
 First, search for the specific plant species you are interested in by their scientific name. Filter these results by 'fruits present', 'ripening fruits present', and 'ripe fruits present'. 
 At the top of the page, click the download button. The downloaded data does not include site IDs, so they must be generated.
 
 Next, run `generate_unique_ids.py`. This will generate unique site IDs for each observation and output a new file containing 'site_id'.
 
-## Data Download - [Pan European Phenology Project PEP725] (http://www.zamg.ac.at/pep725/)
+## Data Download - [Pan European Phenology Project PEP725](http://www.zamg.ac.at/pep725/)
 Users must have an account to download any data. On the homepage menu, navigate to the data selection page. Using the dropdown menu, select the plant species of interest. 
 The data is organized based on cultivar type and country. Click the download button for each country and cultivar type of interest. The downloaded data is not properly formatted for our needs, so it must be transformed.
 
