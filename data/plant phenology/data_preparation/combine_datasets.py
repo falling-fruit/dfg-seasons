@@ -20,7 +20,7 @@ data1 = pd.read_csv("/falling fruit/data1.csv") # Replace with appropriate filep
 # Read the second dataset
 data2 = pd.read_csv("/falling fruit/data2.csv") # Replace with appropriate filepath 
 
-# Concat the two 
+# Concat the datasets
 fruit = pd.concat([data1, data2], axis = 0)
 
 # Export to a new CSV file
