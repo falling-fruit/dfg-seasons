@@ -22,22 +22,32 @@ Stock Python Packages:
 The best approach to install and run these is to create a dedicated conda environment. Pandas has difficulty ensuring that all of the packages are compatible with each other. A tutorial on conda environments can be found [here](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#).
 
 # Data Pulling
+## ERA5-Land Monthly and Hourly Datasets  
+### Overview
+The following procedure describes the process for downloading the [hourly](https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-land?tab=form) and [monthly](https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-single-levels-monthly-means?tab=form) weather/climate data from Climate Data Store (CDS). These sources provide weather observations across the globe from 1940 to 2023.
+### Tools
+[Source for hourly observations](https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-land?tab=form), [Source for monthly observations](https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-single-levels-monthly-means?tab=form), Python
+### Data Download
+To start with, users need to create an account with Climate Data Store in order to send API requests to the server. From there, users could use the sources above and choose desired variables, years, times geographcal range, output format. By clicking on Show API request on the bottom, the CDS website would generate an API script that users can run on their local computers to dowload the data. 
 
-## Overview
+However, with Python script pull_weather_data, users can easily provide desired sepcifications such as variables (e.g. skin temperature), months (e.g. 10, 11), times on hourly basis(e.g. 15:00, 16:00), years(e.g. 2000, 2001), resolution (e.g. 1 * 1),  and geographical range through command line arguments. Each value should be separated by a comma. If any of the arguments is not provided, the program would by default fetch data for all available data satifying other specifications. Once all required arguments are provided, the data would be output into a Grib file.
+
+## Plant Phenology and PEP725
+### Overview
 The following procedure describes the process for downloading phenology data from the following sources: Plant Phenology and PEP725. 
 Plant Phenology (found [here](https://pyphenology.readthedocs.io/en/master/data_structures.html)) utilizes the USA National Phenology Network, which provides many phenology observations across the United States.
 The Pan European Phenology Project PEP725 (found [here](http://www.zamg.ac.at/pep725/)) provides phenological data across Europe.
 
-## Tools
+### Tools
 [Plant Phenology](https://pyphenology.readthedocs.io/en/master/data_structures.html),  [PEP725](http://www.zamg.ac.at/pep725/), Microsoft Excel, Python
 
-## Data Download - [Plant Phenology](https://pyphenology.readthedocs.io/en/master/data_structures.html)
+### Data Download - [Plant Phenology](https://pyphenology.readthedocs.io/en/master/data_structures.html)
 First, search for the specific plant species you are interested in by their scientific name. Filter these results by _fruits present_, _ripening fruits present_, and _ripe fruits present_. 
 At the top of the page, click the download button. The downloaded data does not include site IDs, so they must be generated.
 
 Next, run `generate_unique_ids.py`. This will generate unique site IDs for each observation and output a new file containing 'site_id'.
 
-## Data Download - [Pan European Phenology Project PEP725](http://www.zamg.ac.at/pep725/)
+### Data Download - [Pan European Phenology Project PEP725](http://www.zamg.ac.at/pep725/)
 Users must have an account to download any data. On the homepage menu, navigate to the _data selection_ page. Using the dropdown menu, select the plant species of interest. 
 The data is organized based on cultivar type and country. Click the download button for each country and cultivar type of interest. The downloaded data is not properly formatted for our needs, so it must be transformed.
 
