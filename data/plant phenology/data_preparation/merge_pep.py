@@ -17,10 +17,10 @@ import pandas as pd
 phenology = pd.read_csv("/PEP725/PEP725_AT_Prunus_avium(early_cultivar).csv") # Replace with appropriate filepath 
 stations = pd.read_csv("/PEP725/PEP725_AT_stations.csv") # Replace with appropriate filepath 
 
-# Merge the two datasets on column 'PEP_ID'
+# Merge the dataframes based on the column 'PEP_ID'
 merged_data = pd.merge(phenology, stations, on = 'PEP_ID')
 
-# Export to a new CSV file
+# Export the merged data to a new CSV file
 merged_data.to_csv('/falling fruit/merged_data.csv', index = False) # Replace with appropriate filepath 
 
 # Display the new merged dataset
