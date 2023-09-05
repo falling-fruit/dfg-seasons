@@ -25,11 +25,12 @@ The best approach to install and run these is to create a dedicated conda enviro
 
 ## Overview
 The following procedure describes the process for downloading phenology data from the following sources: Plant Phenology and PEP725. 
-Plant Phenology (found [here](https://pyphenology.readthedocs.io/en/master/data_structures.html)) utilizes the USA National Phenology Network, which provides many phenology observations across the United States.
+
+Plant Phenology (found [here](https://plantphenology.org/)) utilizes the USA National Phenology Network, which provides many phenology observations across the United States.
 The Pan European Phenology Project PEP725 (found [here](http://www.zamg.ac.at/pep725/)) provides phenological data across Europe.
 
 ## Tools
-[Plant Phenology](https://pyphenology.readthedocs.io/en/master/data_structures.html),  [PEP725](http://www.zamg.ac.at/pep725/), Microsoft Excel, Python
+[Plant Phenology](https://plantphenology.org/),  [PEP725](http://www.zamg.ac.at/pep725/), Microsoft Excel, Python
 
 ## Data Download - [Plant Phenology](https://pyphenology.readthedocs.io/en/master/data_structures.html)
 First, search for the specific plant species you are interested in by their scientific name. Filter these results by _fruits present_, _ripening fruits present_, and _ripe fruits present_. 
