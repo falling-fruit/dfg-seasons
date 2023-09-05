@@ -32,7 +32,7 @@ The Pan European Phenology Project PEP725 (found [here](http://www.zamg.ac.at/pe
 ## Tools
 [Plant Phenology](https://plantphenology.org/),  [PEP725](http://www.zamg.ac.at/pep725/), Microsoft Excel, Python
 
-## Data Download - [Plant Phenology](https://pyphenology.readthedocs.io/en/master/data_structures.html)
+## Data Download - [Plant Phenology](https://plantphenology.org/)
 First, search for the specific plant species you are interested in by their scientific name. Filter these results by _fruits present_, _ripening fruits present_, and _ripe fruits present_. 
 At the top of the page, click the download button. The downloaded data does not include site IDs, so they must be generated.
 
